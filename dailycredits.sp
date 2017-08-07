@@ -75,6 +75,7 @@ stock void GiveCredits(client)
 		SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]);
 		Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
 		FirstDate[client] = false;
+		return;
 	}
 	Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + ReturnDailyBonus(client)); // Giving credits
 	PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits) + ReturnDailyBonus(client)); // Chat 
