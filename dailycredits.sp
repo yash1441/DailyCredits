@@ -74,7 +74,7 @@ stock void GiveCredits(client)
 		IntToString(StringToInt(SavedBonus[client]) + 1, SavedBonus[client], sizeof(SavedBonus[])); // Add 1 to bonus
 		SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]);
 		Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
-		FirstDate[client] = false;
+		FirstDay[client] = false;
 		return;
 	}
 	Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + ReturnDailyBonus(client)); // Giving credits
