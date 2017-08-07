@@ -3,7 +3,7 @@
 #include <store>
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.0"
+#define PLUGIN_VERSION "1.1"
 
 Handle g_hDailyEnable;
 Handle g_hDailyCredits;
@@ -13,6 +13,7 @@ Handle g_hDailyBonusCookie;
 char CurrentDate[20];
 char SavedDate[MAXPLAYERS + 1][50];
 char SavedBonus[MAXPLAYERS + 1][4];
+bool FirstDay[MAXPLAYERS + 1] = {false,...};
 
 
 public Plugin myinfo = 
@@ -43,14 +44,11 @@ public void OnPluginStart()
 	FormatTime(CurrentDate, sizeof(CurrentDate), "%Y%m%d"); // Save current date in variable
 }
 
-public void OnClientDisconnect(client)
-{
-	SetClientCookie(client, g_hDailyCookie, CurrentDate); // Save current date on client exit
-}
-
 public OnClientCookiesCached(client)
 {
 	GetClientCookie(client, g_hDailyCookie, SavedDate[client], sizeof(SavedDate[])); // Get saved date on client connecting
+	if (StrEqual(SavedDate[client], ""))
+		FirstDay[client] = true;
 	if ((StringToInt(SavedDate[client]) - StringToInt(CurrentDate)) > 1 || (StringToInt(SavedDate[client]) - StringToInt(CurrentDate)) < 0)
 		SetClientCookie(client, g_hDailyBonusCookie, "0"); // Set daily bonus to 0 if client connected after long time or invalid time
 	GetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client], sizeof(SavedBonus[])); // Get saved bonus on client connecting
@@ -59,7 +57,7 @@ public OnClientCookiesCached(client)
 public Action Cmd_Daily(int client, int args)
 {
 	if (!GetConVarBool(g_hDailyEnable)) return Plugin_Handled;
-	if(IsValidClient(client) && IsDailyAvailable(client)) // Check if daily is available
+	if((IsValidClient(client) && IsDailyAvailable(client)) || FirstDay[client]) // Check if daily is available
 	{
 		GiveCredits(client); // Give credits
 	}
