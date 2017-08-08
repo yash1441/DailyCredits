@@ -49,7 +49,7 @@ public OnClientCookiesCached(client)
 	GetClientCookie(client, g_hDailyCookie, SavedDate[client], sizeof(SavedDate[])); // Get saved date on client connecting
 	if (StrEqual(SavedDate[client], ""))
 		FirstDay[client] = true;
-	if ((StringToInt(SavedDate[client]) - StringToInt(CurrentDate)) > 1 || (StringToInt(SavedDate[client]) - StringToInt(CurrentDate)) < 0)
+	if ((StringToInt(CurrentDate) - StringToInt(SavedDate[client])) > 1 || (StringToInt(CurrentDate) - StringToInt(SavedDate[client])) < 0)
 		SetClientCookie(client, g_hDailyBonusCookie, "0"); // Set daily bonus to 0 if client connected after long time or invalid time
 	GetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client], sizeof(SavedBonus[])); // Get saved bonus on client connecting
 }
@@ -87,12 +87,12 @@ stock void GiveCredits(client)
 
 stock bool IsDailyAvailable(int client)
 {
-	if (StringToInt(SavedDate[client]) - StringToInt(CurrentDate) == 1)
+	if (StringToInt(CurrentDate) - StringToInt(SavedDate[client]) == 1)
 	{
 		return true; // If saved date - current date = 1 return true
 	}
 	
-	else if (StringToInt(SavedDate[client]) - StringToInt(CurrentDate) == 0)
+	else if (StringToInt(CurrentDate) - StringToInt(SavedDate[client]) == 0)
 	{
 		PrintToChat(client, "[Daily] Come back tomorrow for your reward."); // if = 0 then tomorrow msg
 		return false;
