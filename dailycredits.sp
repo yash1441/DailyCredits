@@ -3,7 +3,7 @@
 #include <store>
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION "1.2"
 
 Handle g_hDailyEnable;
 Handle g_hDailyCredits;
