@@ -3,7 +3,7 @@
 #include <store>
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.3"
+#define PLUGIN_VERSION "1.4"
 
 Handle g_hDailyEnable;
 Handle g_hDailyCredits;
@@ -13,7 +13,6 @@ Handle g_hDailyBonusCookie;
 char CurrentDate[20];
 char SavedDate[MAXPLAYERS + 1][50];
 char SavedBonus[MAXPLAYERS + 1][4];
-bool FirstDay[MAXPLAYERS + 1] = {false,...};
 
 
 public Plugin myinfo = 
@@ -47,27 +46,36 @@ public void OnPluginStart()
 public void OnClientCookiesCached(int client)
 {
 	GetClientCookie(client, g_hDailyCookie, SavedDate[client], sizeof(SavedDate[])); // Get saved date on client connecting
-	if (StrEqual(SavedDate[client], ""))
-	{
-		FirstDay[client] = true;
-		SetClientCookie(client, g_hDailyBonusCookie, "0");
-	}
 	GetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client], sizeof(SavedBonus[])); // Get saved bonus on client connecting
 }
 
 public Action Cmd_Daily(int client, int args)
 {
 	if (!GetConVarBool(g_hDailyEnable)) return Plugin_Handled;
-	if((IsValidClient(client) && IsDailyAvailable(client)) || FirstDay[client]) // Check if daily is available
+	if (!IsValidClient(client)) return Plugin_Handled;
+	if (StrEqual(SavedDate[client], ""))
 	{
-		GiveCredits(client); // Give credits
+		GiveCredits(client, true);
+		return Plugin_Handled;
+	}
+	else if(IsDailyAvailable(client) == 1) // Check if daily is available
+	{
+		GiveCredits(client, false); // Give credits
+	}
+	else if(IsDailyAvailable(client) == 2) // Check if daily is available
+	{
+		GiveCredits(client, true); // Give credits
+	}
+	else if(IsDailyAvailable(client) == -1) // Check if daily is available
+	{
+		PrintToChat(client, "[Daily] Error. Invalid cookie!");
 	}
 	return Plugin_Handled;
 }
 
-stock void GiveCredits(client)
+stock void GiveCredits(int client, bool FirstDay)
 {
-	if (FirstDay[client])
+	if (FirstDay)
 	{
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits)); // Giving credits
 		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
@@ -75,13 +83,12 @@ stock void GiveCredits(client)
 		strcopy(SavedBonus[client], sizeof(SavedBonus[]), "1");
 		SetClientCookie(client, g_hDailyCookie, CurrentDate);
 		Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
-		FirstDay[client] = false;
 	}
 	else
 	{
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + ReturnDailyBonus(client)); // Giving credits
 		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits) + ReturnDailyBonus(client)); // Chat 
-		SetClientCookie(client, g_hDailyCookie, CurrentDate);+ // Set saved date to today
+		SetClientCookie(client, g_hDailyCookie, CurrentDate); // Set saved date to today
 		Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
 		int cookievalue = StringToInt(SavedBonus[client]);
 		cookievalue++;
@@ -90,20 +97,28 @@ stock void GiveCredits(client)
 	}
 }
 
-stock bool IsDailyAvailable(int client)
+stock int IsDailyAvailable(int client)
 {
 	if (StringToInt(CurrentDate) - StringToInt(SavedDate[client]) == 1)
 	{
-		return true; // If saved date - current date = 1 return true
+		return 1; // If saved date - current date = 1 return true
 	}
 	
 	else if (StringToInt(CurrentDate) - StringToInt(SavedDate[client]) == 0)
 	{
 		PrintToChat(client, "[Daily] Come back tomorrow for your reward."); // if = 0 then tomorrow msg
-		return false;
+		return 0;
 	}
 	
-	else return false;
+	else if (StringToInt(CurrentDate) - StringToInt(SavedDate[client]) > 1)
+	{
+		PrintToChat(client, "[Daily] Your daily credits streak of %i days ended!", StringToInt(SavedBonus[client]));
+		strcopy(SavedBonus[client], sizeof(SavedBonus[]), "0");
+		SetClientCookie(client, g_hDailyBonusCookie, "0");
+		return 2;
+	}
+	
+	else return -1;
 }
 
 public int ReturnDailyBonus(int client)
