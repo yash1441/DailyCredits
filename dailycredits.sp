@@ -61,16 +61,19 @@ public Action Cmd_Daily(int client, int args)
 	else if(IsDailyAvailable(client) == 1) // Check if daily is available
 	{
 		GiveCredits(client, false); // Give credits
+		return Plugin_Handled;
 	}
 	else if(IsDailyAvailable(client) == 2) // Check if daily is available
 	{
 		GiveCredits(client, true); // Give credits
+		return Plugin_Handled;
 	}
 	else if(IsDailyAvailable(client) == -1) // Check if daily is available
 	{
 		PrintToChat(client, "[Daily] Error. Invalid cookie!");
+		return Plugin_Handled;
 	}
-	return Plugin_Handled;
+	else return Plugin_Handled;
 }
 
 stock void GiveCredits(int client, bool FirstDay)
