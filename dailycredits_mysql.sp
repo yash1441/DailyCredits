@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION "1.2"
 
 #include <sourcemod>
 #include <sdktools>
@@ -84,6 +84,7 @@ stock void GiveCredits(int client, bool FirstTime)
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
 		Format(buffer, sizeof(buffer), "INSERT INTO players VALUES ('%s', '%i', '%i')", steamId, StringToInt(CurrentDate), temp);
+		SQL_FastQuery(db, buffer);
 	}
 	else
 	{
@@ -105,11 +106,11 @@ stock void GiveCredits(int client, bool FirstTime)
 		}
 		else if ((date1 - date2) == 0)
 		{
-			PrintToChat(client, "[Daily] Come back tomorrow for your reward.");
+			PrintToChat(client, "[Store] Come back tomorrow for your reward.");
 		}
 		else if ((date1 - date2) > 1)
 		{
-			PrintToChat(client, "[Daily] Your daily credits streak of %i days ended!", bonus);
+			PrintToChat(client, "[Store] Your daily credits streak of %i days ended!", bonus);
 			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
 			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = '%i', bonus_amount = '1' WHERE steamid = '%s'", date1, steamId);
