@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.0"
+#define PLUGIN_VERSION "1.1"
 
 #include <sourcemod>
 #include <sdktools>
@@ -83,26 +83,24 @@ stock void GiveCredits(int client, bool FirstTime)
 		int temp = 1;
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
-		Format(buffer, sizeof(buffer), "INSERT INTO players VALUES ('%s', '%i', '%i')", steamId, CurrentDate, temp);
+		Format(buffer, sizeof(buffer), "INSERT INTO players VALUES ('%s', '%i', '%i')", steamId, StringToInt(CurrentDate), temp);
 	}
 	else
 	{
-		char connection[50];
 		int bonus;
 		Format(buffer, sizeof(buffer), "SELECT * FROM players WHERE steam_id = '%s'", steamId);
 		DBResultSet query = SQL_Query(db, buffer);
 		SQL_FetchRow(query);
-		SQL_FetchString(query, 1, connection, sizeof(connection));
+		int date2 = SQL_FetchInt(query, 1);
 		bonus = SQL_FetchInt(query, 2);
 		delete query;
 		int date1 = StringToInt(CurrentDate);
-		int date2 = StringToInt(connection);
 		if ((date1 - date2) == 1)
 		{
 			int calc_bonus = bonus * GetConVarInt(g_hDailyBonus);
 			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + calc_bonus);
 			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits) + calc_bonus);
-			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = '%s', bonus_amount = '%i' WHERE steamid = '%s'", CurrentDate, bonus + 1, steamId);
+			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = '%i', bonus_amount = '%i' WHERE steamid = '%s'", date1, bonus + 1, steamId);
 			SQL_FastQuery(db, buffer);
 		}
 		else if ((date1 - date2) == 0)
@@ -114,7 +112,7 @@ stock void GiveCredits(int client, bool FirstTime)
 			PrintToChat(client, "[Daily] Your daily credits streak of %i days ended!", bonus);
 			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
-			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = '%s', bonus_amount = '1' WHERE steamid = '%s'", CurrentDate, steamId);
+			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = '%i', bonus_amount = '1' WHERE steamid = '%s'", date1, steamId);
 			SQL_FastQuery(db, buffer);
 		}
 	}
