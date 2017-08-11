@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.2"
+#define PLUGIN_VERSION "1.3"
 
 #include <sourcemod>
 #include <sdktools>
@@ -45,7 +45,7 @@ public void InitializeDB()
 		SetFailState(Error);
 	}
 	SQL_LockDatabase(db);
-	SQL_FastQuery(db, "CREATE TABLE IF NOT EXISTS players (steam_id TEXT, last_connect INTEGER, bonus_amount INTEGER);");
+	SQL_FastQuery(db, "CREATE TABLE IF NOT EXISTS players (steam_id VARCHAR(255), last_connect INTEGER, bonus_amount INTEGER);");
 	SQL_UnlockDatabase(db);
 }
 
@@ -80,20 +80,23 @@ stock void GiveCredits(int client, bool FirstTime)
 	GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId));
 	if (FirstTime)
 	{
-		int temp = 1;
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
-		Format(buffer, sizeof(buffer), "INSERT INTO players VALUES ('%s', '%i', '%i')", steamId, StringToInt(CurrentDate), temp);
-		SQL_FastQuery(db, buffer);
+		Format(buffer, sizeof(buffer), "INSERT INTO players (steam_id, last_connect, bonus_amount) VALUES ('%s', %i, 1)", steamId, StringToInt(CurrentDate));
+		if(!SQL_FastQuery(db, buffer))
+		{
+			char error[255];
+			SQL_GetError(db, error, sizeof(error));
+			PrintToServer("Failed to query (error: %s)", error);
+		}
 	}
 	else
 	{
-		int bonus;
 		Format(buffer, sizeof(buffer), "SELECT * FROM players WHERE steam_id = '%s'", steamId);
 		DBResultSet query = SQL_Query(db, buffer);
 		SQL_FetchRow(query);
 		int date2 = SQL_FetchInt(query, 1);
-		bonus = SQL_FetchInt(query, 2);
+		int bonus = SQL_FetchInt(query, 2);
 		delete query;
 		int date1 = StringToInt(CurrentDate);
 		if ((date1 - date2) == 1)
@@ -101,8 +104,13 @@ stock void GiveCredits(int client, bool FirstTime)
 			int calc_bonus = bonus * GetConVarInt(g_hDailyBonus);
 			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + calc_bonus);
 			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits) + calc_bonus);
-			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = '%i', bonus_amount = '%i' WHERE steamid = '%s'", date1, bonus + 1, steamId);
-			SQL_FastQuery(db, buffer);
+			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steamid = '%s'", date1, bonus + 1, steamId);
+			if(!SQL_FastQuery(db, buffer))
+			{
+				char error[255];
+				SQL_GetError(db, error, sizeof(error));
+				PrintToServer("Failed to query (error: %s)", error);
+			}
 		}
 		else if ((date1 - date2) == 0)
 		{
@@ -113,8 +121,13 @@ stock void GiveCredits(int client, bool FirstTime)
 			PrintToChat(client, "[Store] Your daily credits streak of %i days ended!", bonus);
 			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
-			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = '%i', bonus_amount = '1' WHERE steamid = '%s'", date1, steamId);
-			SQL_FastQuery(db, buffer);
+			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = 1 WHERE steamid = '%s'", date1, steamId);
+			if(!SQL_FastQuery(db, buffer))
+			{
+				char error[255];
+				SQL_GetError(db, error, sizeof(error));
+				PrintToServer("Failed to query (error: %s)", error);
+			}
 		}
 	}
 }
