@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.4"
+#define PLUGIN_VERSION "1.5"
 
 #include <sourcemod>
 #include <sdktools>
@@ -45,7 +45,7 @@ public void InitializeDB()
 	{
 		SetFailState(Error);
 	}
-	SQL_TQuery(db, SQLErrorCheckCallback, "CREATE TABLE IF NOT EXISTS players (steam_id VARCHAR(20), last_connect INT(12), bonus_amount INT(12));");
+	SQL_TQuery(db, SQLErrorCheckCallback, "CREATE TABLE IF NOT EXISTS players (steam_id VARCHAR(20) UNIQUE, last_connect INT(12), bonus_amount INT(12));");
 }
 
 public Action Cmd_Daily(int client, int args)
@@ -53,22 +53,26 @@ public Action Cmd_Daily(int client, int args)
 	if (!GetConVarBool(g_hDailyEnable)) return Plugin_Handled;
 	if (!IsValidClient(client)) return Plugin_Handled;
 	char steamId[32];
-	GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId));
-	char buffer[200];
-	Format(buffer, sizeof(buffer), "SELECT * FROM players WHERE steam_id = '%s'", steamId);
-	SQL_LockDatabase(db);
-	DBResultSet query = SQL_Query(db, buffer);
-	SQL_UnlockDatabase(db);
-	if (SQL_GetRowCount(query) == 0)
+	if(GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId)))
 	{
-		delete query;
-		GiveCredits(client, true);
+		char buffer[200];
+		Format(buffer, sizeof(buffer), "SELECT * FROM players WHERE steam_id = '%s'", steamId);
+		SQL_LockDatabase(db);
+		DBResultSet query = SQL_Query(db, buffer);
+		SQL_UnlockDatabase(db);
+		if (SQL_GetRowCount(query) == 0)
+		{
+			delete query;
+			GiveCredits(client, true);
+		}
+		else
+		{
+			delete query;
+			GiveCredits(client, false);
+		}
 	}
-	else
-	{
-		delete query;
-		GiveCredits(client, false);
-	}
+	else LogError("Failed to get Steam ID");
+	
 	return Plugin_Handled;
 }
 
@@ -76,46 +80,49 @@ stock void GiveCredits(int client, bool FirstTime)
 {
 	char buffer[200];
 	char steamId[32];
-	GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId));
-	if (FirstTime)
+	if(GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId)))
 	{
-		Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
-		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
-		Format(buffer, sizeof(buffer), "INSERT IGNORE INTO players (steam_id, last_connect, bonus_amount) VALUES ('%s', %d, 1)", steamId, StringToInt(CurrentDate));
-		SQL_TQuery(db, SQLErrorCheckCallback, buffer);
-	}
-	else
-	{
-		Format(buffer, sizeof(buffer), "SELECT * FROM players WHERE steam_id = '%s'", steamId);
-		SQL_LockDatabase(db);
-		DBResultSet query = SQL_Query(db, buffer);
-		SQL_UnlockDatabase(db);
-		SQL_FetchRow(query);
-		int date2 = SQL_FetchInt(query, 1);
-		int bonus = SQL_FetchInt(query, 2);
-		delete query;
-		int date1 = StringToInt(CurrentDate);
-		if ((date1 - date2) == 1)
+		if (FirstTime)
 		{
-			int calc_bonus = bonus * GetConVarInt(g_hDailyBonus);
-			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + calc_bonus);
-			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits) + calc_bonus);
-			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steamid = '%s'", date1, bonus + 1, steamId);
-			SQL_TQuery(db, SQLErrorCheckCallback, buffer);
-		}
-		else if ((date1 - date2) == 0)
-		{
-			PrintToChat(client, "[Store] Come back tomorrow for your reward.");
-		}
-		else if ((date1 - date2) > 1)
-		{
-			PrintToChat(client, "[Store] Your daily credits streak of %i days ended!", bonus);
 			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
-			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = 1 WHERE steamid = '%s'", date1, steamId);
+			Format(buffer, sizeof(buffer), "INSERT IGNORE INTO players (steam_id, last_connect, bonus_amount) VALUES ('%s', %d, 1)", steamId, StringToInt(CurrentDate));
 			SQL_TQuery(db, SQLErrorCheckCallback, buffer);
 		}
+		else
+		{
+			Format(buffer, sizeof(buffer), "SELECT * FROM players WHERE steam_id = '%s'", steamId);
+			SQL_LockDatabase(db);
+			DBResultSet query = SQL_Query(db, buffer);
+			SQL_UnlockDatabase(db);
+			SQL_FetchRow(query);
+			int date2 = SQL_FetchInt(query, 1);
+			int bonus = SQL_FetchInt(query, 2);
+			delete query;
+			int date1 = StringToInt(CurrentDate);
+			if ((date1 - date2) == 1)
+			{
+				int calc_bonus = bonus * GetConVarInt(g_hDailyBonus);
+				Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + calc_bonus);
+				PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits) + calc_bonus);
+				Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steamid = '%s'", date1, bonus + 1, steamId);
+				SQL_TQuery(db, SQLErrorCheckCallback, buffer);
+			}
+			else if ((date1 - date2) == 0)
+			{
+				PrintToChat(client, "[Store] Come back tomorrow for your reward.");
+			}
+			else if ((date1 - date2) > 1)
+			{
+				PrintToChat(client, "[Store] Your daily credits streak of %i days ended!", bonus);
+				Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
+				PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
+				Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = 1 WHERE steamid = '%s'", date1, steamId);
+				SQL_TQuery(db, SQLErrorCheckCallback, buffer);
+			}
+		}
 	}
+	else LogError("Failed to get Steam ID");
 }
 
 stock bool IsValidClient(int client)
