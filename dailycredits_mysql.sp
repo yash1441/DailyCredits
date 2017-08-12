@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.3"
+#define PLUGIN_VERSION "1.4"
 
 #include <sourcemod>
 #include <sdktools>
@@ -40,13 +40,12 @@ public void InitializeDB()
 {
 	char Error[255];
 	db = SQL_Connect("dailycredits", true, Error, sizeof(Error));
+	SQL_SetCharset(db, "utf8");
 	if(db == INVALID_HANDLE)
 	{
 		SetFailState(Error);
 	}
-	SQL_LockDatabase(db);
-	SQL_FastQuery(db, "CREATE TABLE IF NOT EXISTS players (steam_id VARCHAR(255), last_connect INTEGER, bonus_amount INTEGER);");
-	SQL_UnlockDatabase(db);
+	SQL_TQuery(db, SQLErrorCheckCallback, "CREATE TABLE IF NOT EXISTS players (steam_id VARCHAR(20), last_connect INT(12), bonus_amount INT(12));");
 }
 
 public Action Cmd_Daily(int client, int args)
@@ -57,18 +56,18 @@ public Action Cmd_Daily(int client, int args)
 	GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId));
 	char buffer[200];
 	Format(buffer, sizeof(buffer), "SELECT * FROM players WHERE steam_id = '%s'", steamId);
+	SQL_LockDatabase(db);
 	DBResultSet query = SQL_Query(db, buffer);
-	if (query == null)
+	SQL_UnlockDatabase(db);
+	if (SQL_GetRowCount(query) == 0)
 	{
-		char error[255];
-		SQL_GetError(db, error, sizeof(error));
-		PrintToServer("Failed to query (error: %s)", error);
+		delete query;
 		GiveCredits(client, true);
 	}
 	else
 	{
-		GiveCredits(client, false);
 		delete query;
+		GiveCredits(client, false);
 	}
 	return Plugin_Handled;
 }
@@ -82,18 +81,15 @@ stock void GiveCredits(int client, bool FirstTime)
 	{
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
-		Format(buffer, sizeof(buffer), "INSERT INTO players (steam_id, last_connect, bonus_amount) VALUES ('%s', %i, 1)", steamId, StringToInt(CurrentDate));
-		if(!SQL_FastQuery(db, buffer))
-		{
-			char error[255];
-			SQL_GetError(db, error, sizeof(error));
-			PrintToServer("Failed to query (error: %s)", error);
-		}
+		Format(buffer, sizeof(buffer), "INSERT IGNORE INTO players (steam_id, last_connect, bonus_amount) VALUES ('%s', %d, 1)", steamId, StringToInt(CurrentDate));
+		SQL_TQuery(db, SQLErrorCheckCallback, buffer);
 	}
 	else
 	{
 		Format(buffer, sizeof(buffer), "SELECT * FROM players WHERE steam_id = '%s'", steamId);
+		SQL_LockDatabase(db);
 		DBResultSet query = SQL_Query(db, buffer);
+		SQL_UnlockDatabase(db);
 		SQL_FetchRow(query);
 		int date2 = SQL_FetchInt(query, 1);
 		int bonus = SQL_FetchInt(query, 2);
@@ -105,12 +101,7 @@ stock void GiveCredits(int client, bool FirstTime)
 			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + calc_bonus);
 			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits) + calc_bonus);
 			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steamid = '%s'", date1, bonus + 1, steamId);
-			if(!SQL_FastQuery(db, buffer))
-			{
-				char error[255];
-				SQL_GetError(db, error, sizeof(error));
-				PrintToServer("Failed to query (error: %s)", error);
-			}
+			SQL_TQuery(db, SQLErrorCheckCallback, buffer);
 		}
 		else if ((date1 - date2) == 0)
 		{
@@ -122,12 +113,7 @@ stock void GiveCredits(int client, bool FirstTime)
 			Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 			PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
 			Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = 1 WHERE steamid = '%s'", date1, steamId);
-			if(!SQL_FastQuery(db, buffer))
-			{
-				char error[255];
-				SQL_GetError(db, error, sizeof(error));
-				PrintToServer("Failed to query (error: %s)", error);
-			}
+			SQL_TQuery(db, SQLErrorCheckCallback, buffer);
 		}
 	}
 }
@@ -138,4 +124,10 @@ stock bool IsValidClient(int client)
 	if(client > MaxClients) return false;
 	if(!IsClientConnected(client)) return false;
 	return IsClientInGame(client);
+}
+
+public void SQLErrorCheckCallback(Handle owner, Handle hndl, const char[] error, any data)
+{
+	if (!StrEqual(error, ""))
+		LogError(error);
 }
