@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.5"
+#define PLUGIN_VERSION "1.6"
 
 #include <sourcemod>
 #include <sdktools>
@@ -10,9 +10,10 @@
 #pragma newdecls required
 
 Database db;
-Handle g_hDailyEnable;
-Handle g_hDailyCredits;
-Handle g_hDailyBonus;
+ConVar g_hDailyEnable;
+ConVar g_hDailyCredits;
+ConVar g_hDailyBonus;
+ConVar g_hDailyMax;
 char CurrentDate[20];
 
 public Plugin myinfo = 
@@ -30,6 +31,7 @@ public void OnPluginStart()
 	g_hDailyEnable = CreateConVar("store_daily_credits_enable", "1", "Daily Credits enable? 0 = disable, 1 = enable", 0, true, 0.0, true, 1.0);
 	g_hDailyCredits = CreateConVar("store_daily_credits_amount", "10", "Amount of Credits.", 0, true, 0.0);
 	g_hDailyBonus = CreateConVar("store_daily_credits_bonus", "2", "Increase in Daily Credits on consecutive days.", 0, true, 0.0);
+	g_hDailyMax = CreateConVar("store_daily_credits_max", "50", "Max credits that you can get daily.", 0, true, 0.0);
 	RegConsoleCmd("sm_daily", Cmd_Daily);
 	RegConsoleCmd("sm_dailies", Cmd_Daily);
 	FormatTime(CurrentDate, sizeof(CurrentDate), "%Y%m%d"); // Save current date in variable
@@ -102,9 +104,10 @@ stock void GiveCredits(int client, bool FirstTime)
 			int date1 = StringToInt(CurrentDate);
 			if ((date1 - date2) == 1)
 			{
-				int calc_bonus = bonus * GetConVarInt(g_hDailyBonus);
-				Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits) + calc_bonus);
-				PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits) + calc_bonus);
+				int TotalCredits = GetConVarInt(g_hDailyCredits) + (bonus * GetConVarInt(g_hDailyBonus));
+				if (TotalCredits > GetConVarInt(g_hDailyMax)) TotalCredits = GetConVarInt(g_hDailyMax);
+				Store_SetClientCredits(client, Store_GetClientCredits(client) + TotalCredits);
+				PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", TotalCredits);
 				Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steamid = '%s'", date1, bonus + 1, steamId);
 				SQL_TQuery(db, SQLErrorCheckCallback, buffer);
 			}
