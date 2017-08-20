@@ -108,7 +108,7 @@ stock void GiveCredits(int client, bool FirstTime)
 				if (TotalCredits > GetConVarInt(g_hDailyMax)) TotalCredits = GetConVarInt(g_hDailyMax);
 				Store_SetClientCredits(client, Store_GetClientCredits(client) + TotalCredits);
 				PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", TotalCredits);
-				Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steamid = '%s'", date1, bonus + 1, steamId);
+				Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steam_id = '%s'", date1, bonus + 1, steamId);
 				SQL_TQuery(db, SQLErrorCheckCallback, buffer);
 			}
 			else if ((date1 - date2) == 0)
@@ -120,7 +120,7 @@ stock void GiveCredits(int client, bool FirstTime)
 				PrintToChat(client, "[Store] Your daily credits streak of %i days ended!", bonus);
 				Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits));
 				PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
-				Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = 1 WHERE steamid = '%s'", date1, steamId);
+				Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = 1 WHERE steam_id = '%s'", date1, steamId);
 				SQL_TQuery(db, SQLErrorCheckCallback, buffer);
 			}
 		}
