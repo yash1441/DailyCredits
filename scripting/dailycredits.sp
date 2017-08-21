@@ -1,14 +1,16 @@
 #include <sourcemod>
 #include <clientprefs>
 #include <store>
+#include <multicolors>
 
-#define PLUGIN_AUTHOR "Simon"
-#define PLUGIN_VERSION "1.5"
+#define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
+#define PLUGIN_VERSION "1.7"
 
 ConVar g_hDailyEnable;
 ConVar g_hDailyCredits;
 ConVar g_hDailyBonus;
 ConVar g_hDailyMax;
+ConVar g_hDailyReset;
 Handle g_hDailyCookie;
 Handle g_hDailyBonusCookie;
 char CurrentDate[20];
@@ -18,15 +20,16 @@ char SavedBonus[MAXPLAYERS + 1][4];
 
 public Plugin myinfo = 
 {
-	name = "[Store] Daily Credits",
-	author = PLUGIN_AUTHOR,
-	description = "Daily credits for regular players.",
-	version = PLUGIN_VERSION,
+	name = "[Store] Daily Credits", 
+	author = PLUGIN_AUTHOR, 
+	description = "Daily credits for regular players.", 
+	version = PLUGIN_VERSION, 
 	url = "yash1441@yahoo.com"
 };
 
 public void OnPluginStart()
 {
+	LoadTranslations("dailycredits.phrases");
 	CreateConVar("store_daily_credits_version", PLUGIN_VERSION, "Daily Credits Version", FCVAR_DONTRECORD | FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_SPONLY);
 	g_hDailyEnable = CreateConVar("store_daily_credits_enable", "1", "Daily Credits enable? 0 = disable, 1 = enable", 0, true, 0.0, true, 1.0);
 	g_hDailyCredits = CreateConVar("store_daily_credits_amount", "10", "Amount of Credits.", 0, true, 0.0);
@@ -34,7 +37,10 @@ public void OnPluginStart()
 	g_hDailyMax = CreateConVar("store_daily_credits_max", "50", "Max credits that you can get daily.", 0, true, 0.0);
 	g_hDailyCookie = RegClientCookie("DailyCreditsDate", "Cookie for daily credits last used date.", CookieAccess_Protected);
 	g_hDailyBonusCookie = RegClientCookie("DailyCreditsBonus", "Cookie for daily credits bonus.", CookieAccess_Protected);
-	for(new i = MaxClients; i > 0; --i)
+	g_hDailyReset = CreateConVar("sm_daily_credits_resetperiod", "7", "Amount of days after which the streak should reset itself. Set to 0 to disable.", 0, true, 0.0);
+	
+	AutoExecConfig(true, "dailycredits");
+	for (new i = MaxClients; i > 0; --i)
 	{
 		if (!AreClientCookiesCached(i))
 			continue;
@@ -53,26 +59,26 @@ public void OnClientCookiesCached(int client)
 
 public Action Cmd_Daily(int client, int args)
 {
-	if (!GetConVarBool(g_hDailyEnable)) return Plugin_Handled;
-	else if (!IsValidClient(client)) return Plugin_Handled;
+	if (!GetConVarBool(g_hDailyEnable))return Plugin_Handled;
+	else if (!IsValidClient(client))return Plugin_Handled;
 	else if (StrEqual(SavedDate[client], ""))
 	{
 		GiveCredits(client, true);
 		return Plugin_Handled;
 	}
-	else if(IsDailyAvailable(client) == 1) // Check if daily is available
+	else if (IsDailyAvailable(client) == 1) // Check if daily is available
 	{
 		GiveCredits(client, false); // Give credits
 		return Plugin_Handled;
 	}
-	else if(IsDailyAvailable(client) == 2) // Check if daily is available
+	else if (IsDailyAvailable(client) == 2) // Check if daily is available
 	{
 		GiveCredits(client, true); // Give credits
 		return Plugin_Handled;
 	}
-	else if(IsDailyAvailable(client) == -1) // Check if daily is available
+	else if (IsDailyAvailable(client) == -1) // Check if daily is available
 	{
-		PrintToChat(client, "[Daily] Error. Invalid cookie!");
+		CPrintToChatEx(client, client, "%t", "CookieError");
 		return Plugin_Handled;
 	}
 	else return Plugin_Handled;
@@ -83,7 +89,7 @@ stock void GiveCredits(int client, bool FirstDay)
 	if (FirstDay)
 	{
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + GetConVarInt(g_hDailyCredits)); // Giving credits
-		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", GetConVarInt(g_hDailyCredits));
+		CPrintToChatEx(client, client, "%t", "CreditsRecieved", GetConVarInt(g_hDailyCredits));
 		SetClientCookie(client, g_hDailyBonusCookie, "1");
 		strcopy(SavedBonus[client], sizeof(SavedBonus[]), "1");
 		SetClientCookie(client, g_hDailyCookie, CurrentDate);
@@ -91,16 +97,34 @@ stock void GiveCredits(int client, bool FirstDay)
 	}
 	else
 	{
+		int resetDaysSetting = GetConVarInt(g_hDailyReset);
 		int TotalCredits = GetConVarInt(g_hDailyCredits) + ReturnDailyBonus(client);
-		if (TotalCredits > GetConVarInt(g_hDailyMax)) TotalCredits = GetConVarInt(g_hDailyMax);
+		if (TotalCredits > GetConVarInt(g_hDailyMax))TotalCredits = GetConVarInt(g_hDailyMax);
+		int streakDays = ReturnStreakDays(client);
+		
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + TotalCredits); // Giving credits
-		PrintToChat(client, "[Store] You just recieved your daily credits! [%i Credits]", TotalCredits); // Chat 
-		SetClientCookie(client, g_hDailyCookie, CurrentDate); // Set saved date to today
-		Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
-		int cookievalue = StringToInt(SavedBonus[client]);
-		cookievalue++;
-		IntToString(cookievalue, SavedBonus[client], sizeof(SavedBonus[])); // Add 1 to bonus
-		SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]); // Save bonus
+		
+		if (streakDays >= resetDaysSetting) //if the current streak of days is the same as the value for resetting the "streak cycle"
+		{
+			CPrintToChatEx(client, client, "%t", "LastCreditsRecieved", TotalCredits);
+			CPrintToChatEx(client, client, "%t", "ResetDays", resetDaysSetting); //tell the user that the reset cycle has been reached
+			SetClientCookie(client, g_hDailyCookie, CurrentDate); // Set saved date to today
+			Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
+			int cookievalue = 1;
+			IntToString(cookievalue, SavedBonus[client], sizeof(SavedBonus[])); // Reset the bonus
+			SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]); // Save bonus
+		}
+		else //streak is smaller then reset period
+		{
+			CPrintToChatEx(client, client, "%t", "CreditsRecieved", TotalCredits); // Chat 
+			SetClientCookie(client, g_hDailyCookie, CurrentDate); // Set saved date to today
+			Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
+			int cookievalue = StringToInt(SavedBonus[client]);
+			CPrintToChatEx(client, client, "%t", "CurrentDay", cookievalue); //tell the user which day they are currently on
+			cookievalue++;
+			IntToString(cookievalue, SavedBonus[client], sizeof(SavedBonus[])); // Add 1 to bonus
+			SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]); // Save bonus
+		}
 	}
 }
 
@@ -113,13 +137,13 @@ stock int IsDailyAvailable(int client)
 	
 	else if (StringToInt(CurrentDate) - StringToInt(SavedDate[client]) == 0)
 	{
-		PrintToChat(client, "[Daily] Come back tomorrow for your reward."); // if = 0 then tomorrow msg
+		CPrintToChatEx(client, client, "%t", "BackTomorrow"); // if = 0 then tomorrow msg
 		return 0;
 	}
 	
 	else if (StringToInt(CurrentDate) - StringToInt(SavedDate[client]) > 1)
 	{
-		PrintToChat(client, "[Daily] Your daily credits streak of %i days ended!", StringToInt(SavedBonus[client]));
+		CPrintToChatEx(client, client, "%t", "StreakEnded", StringToInt(SavedBonus[client]));
 		strcopy(SavedBonus[client], sizeof(SavedBonus[]), "0");
 		SetClientCookie(client, g_hDailyBonusCookie, "0");
 		return 2;
@@ -134,10 +158,16 @@ public int ReturnDailyBonus(int client)
 	return (cookievalue * GetConVarInt(g_hDailyBonus)); // Return saved bonus x daily bonus value
 }
 
+public int ReturnStreakDays(int client)
+{
+	int bonusDays = StringToInt(SavedBonus[client]);
+	return bonusDays;
+}
+
 stock bool IsValidClient(client)
 {
-	if(client <= 0 ) return false;
-	if(client > MaxClients) return false;
-	if(!IsClientConnected(client)) return false;
+	if (client <= 0)return false;
+	if (client > MaxClients)return false;
+	if (!IsClientConnected(client))return false;
 	return IsClientInGame(client);
-}
+} 
