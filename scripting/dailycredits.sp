@@ -4,7 +4,7 @@
 #include <multicolors>
 
 #define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
-#define PLUGIN_VERSION "1.7"
+#define PLUGIN_VERSION "1.7.1"
 
 ConVar g_hDailyEnable;
 ConVar g_hDailyCredits;
@@ -30,11 +30,11 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
 	LoadTranslations("dailycredits.phrases");
-	CreateConVar("store_daily_credits_version", PLUGIN_VERSION, "Daily Credits Version", FCVAR_DONTRECORD | FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_SPONLY);
-	g_hDailyEnable = CreateConVar("store_daily_credits_enable", "1", "Daily Credits enable? 0 = disable, 1 = enable", 0, true, 0.0, true, 1.0);
-	g_hDailyCredits = CreateConVar("store_daily_credits_amount", "10", "Amount of Credits.", 0, true, 0.0);
-	g_hDailyBonus = CreateConVar("store_daily_credits_bonus", "2", "Increase in Daily Credits on consecutive days.", 0, true, 0.0);
-	g_hDailyMax = CreateConVar("store_daily_credits_max", "50", "Max credits that you can get daily.", 0, true, 0.0);
+	CreateConVar("sm_daily_credits_version", PLUGIN_VERSION, "Daily Credits Version", FCVAR_DONTRECORD | FCVAR_NOTIFY | FCVAR_REPLICATED | FCVAR_SPONLY);
+	g_hDailyEnable = CreateConVar("sm_daily_credits_enable", "1", "Daily Credits enable? 0 = disable, 1 = enable", 0, true, 0.0, true, 1.0);
+	g_hDailyCredits = CreateConVar("sm_daily_credits_amount", "10", "Amount of Credits.", 0, true, 0.0);
+	g_hDailyBonus = CreateConVar("sm_daily_credits_bonus", "2", "Increase in Daily Credits on consecutive days.", 0, true, 0.0);
+	g_hDailyMax = CreateConVar("sm_daily_credits_max", "50", "Max credits that you can get daily.", 0, true, 0.0);
 	g_hDailyCookie = RegClientCookie("DailyCreditsDate", "Cookie for daily credits last used date.", CookieAccess_Protected);
 	g_hDailyBonusCookie = RegClientCookie("DailyCreditsBonus", "Cookie for daily credits bonus.", CookieAccess_Protected);
 	g_hDailyReset = CreateConVar("sm_daily_credits_resetperiod", "7", "Amount of days after which the streak should reset itself. Set to 0 to disable.", 0, true, 0.0);
