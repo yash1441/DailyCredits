@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
-#define PLUGIN_VERSION "1.7.1"
+#define PLUGIN_VERSION "1.8"
 
 #include <sourcemod>
 #include <sdktools>

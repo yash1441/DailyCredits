@@ -4,7 +4,7 @@
 #include <multicolors>
 
 #define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
-#define PLUGIN_VERSION "1.7.1"
+#define PLUGIN_VERSION "1.8"
 
 ConVar g_hDailyEnable;
 ConVar g_hDailyCredits;
