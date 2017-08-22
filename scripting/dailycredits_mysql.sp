@@ -110,24 +110,37 @@ stock void GiveCredits(int client, bool FirstTime)
 			int date1 = StringToInt(CurrentDate);
 			int resetDaysSetting = GetConVarInt(g_hDailyReset);
 			
+			if (resetDaysSetting > 0) {  //needed since after the reset, bonus starts at 0
+				resetDaysSetting--;
+			}
+			
 			//streak is currently continuing
 			if ((date1 - date2) == 1)
 			{
-				int TotalCredits = GetConVarInt(g_hDailyCredits) + (bonus * GetConVarInt(g_hDailyBonus));
+				int TotalCredits = GetConVarInt(g_hDailyCredits) + (bonus * GetConVarInt(g_hDailyBonus)); //bonus can't start at 1, since the first day would get the player a bonus as well
 				if (TotalCredits > GetConVarInt(g_hDailyMax))TotalCredits = GetConVarInt(g_hDailyMax);
 				Store_SetClientCredits(client, Store_GetClientCredits(client) + TotalCredits);
 				
-				if (bonus >= resetDaysSetting)
+				if (resetDaysSetting != 0)
 				{
-					CPrintToChatEx(client, client, "%t", "LastCreditsRecieved", TotalCredits);
-					Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steam_id = '%s'", date1, 1, steamId);
-					CPrintToChatEx(client, client, "%t", "ResetDays", resetDaysSetting);
+					if (bonus >= resetDaysSetting)
+					{
+						CPrintToChatEx(client, client, "%t", "LastCreditsRecieved", TotalCredits);
+						Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steam_id = '%s'", date1, 0, steamId);
+						CPrintToChatEx(client, client, "%t", "ResetDays", resetDaysSetting + 1);
+					}
+					else
+					{
+						CPrintToChatEx(client, client, "%t", "CreditsRecieved", TotalCredits);
+						Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steam_id = '%s'", date1, bonus + 1, steamId);
+						CPrintToChatEx(client, client, "%t", "CurrentDay", bonus + 1);
+					}
 				}
 				else
 				{
 					CPrintToChatEx(client, client, "%t", "CreditsRecieved", TotalCredits);
 					Format(buffer, sizeof(buffer), "UPDATE players SET last_connect = %i, bonus_amount = %i WHERE steam_id = '%s'", date1, bonus + 1, steamId);
-					CPrintToChatEx(client, client, "%t", "CurrentDay", bonus);
+					CPrintToChatEx(client, client, "%t", "CurrentDay", bonus + 1);
 				}
 				SQL_TQuery(db, SQLErrorCheckCallback, buffer);
 			}

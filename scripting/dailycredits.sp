@@ -101,26 +101,44 @@ stock void GiveCredits(int client, bool FirstDay)
 		int TotalCredits = GetConVarInt(g_hDailyCredits) + ReturnDailyBonus(client);
 		if (TotalCredits > GetConVarInt(g_hDailyMax))TotalCredits = GetConVarInt(g_hDailyMax);
 		int streakDays = ReturnStreakDays(client);
+		if (streakDays > 0)
+		{
+			streakDays--;
+		}
 		
 		Store_SetClientCredits(client, Store_GetClientCredits(client) + TotalCredits); // Giving credits
 		
-		if (streakDays >= resetDaysSetting) //if the current streak of days is the same as the value for resetting the "streak cycle"
+		if (streakDays != 0)
 		{
-			CPrintToChatEx(client, client, "%t", "LastCreditsRecieved", TotalCredits);
-			CPrintToChatEx(client, client, "%t", "ResetDays", resetDaysSetting); //tell the user that the reset cycle has been reached
-			SetClientCookie(client, g_hDailyCookie, CurrentDate); // Set saved date to today
-			Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
-			int cookievalue = 1;
-			IntToString(cookievalue, SavedBonus[client], sizeof(SavedBonus[])); // Reset the bonus
-			SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]); // Save bonus
+			if (streakDays >= resetDaysSetting) //if the current streak of days is the same as the value for resetting the "streak cycle"
+			{
+				CPrintToChatEx(client, client, "%t", "LastCreditsRecieved", TotalCredits);
+				CPrintToChatEx(client, client, "%t", "ResetDays", resetDaysSetting); //tell the user that the reset cycle has been reached
+				SetClientCookie(client, g_hDailyCookie, CurrentDate); // Set saved date to today
+				Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
+				int cookievalue = 0;
+				IntToString(cookievalue, SavedBonus[client], sizeof(SavedBonus[])); // Reset the bonus
+				SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]); // Save bonus
+			}
+			else //streak is smaller then reset period
+			{
+				CPrintToChatEx(client, client, "%t", "CreditsRecieved", TotalCredits); // Chat 
+				SetClientCookie(client, g_hDailyCookie, CurrentDate); // Set saved date to today
+				Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
+				int cookievalue = StringToInt(SavedBonus[client]);
+				CPrintToChatEx(client, client, "%t", "CurrentDay", cookievalue + 1); //tell the user which day they are currently on
+				cookievalue++;
+				IntToString(cookievalue, SavedBonus[client], sizeof(SavedBonus[])); // Add 1 to bonus
+				SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]); // Save bonus
+			}
 		}
-		else //streak is smaller then reset period
+		else
 		{
 			CPrintToChatEx(client, client, "%t", "CreditsRecieved", TotalCredits); // Chat 
 			SetClientCookie(client, g_hDailyCookie, CurrentDate); // Set saved date to today
 			Format(SavedDate[client], sizeof(SavedDate[]), CurrentDate);
 			int cookievalue = StringToInt(SavedBonus[client]);
-			CPrintToChatEx(client, client, "%t", "CurrentDay", cookievalue); //tell the user which day they are currently on
+			CPrintToChatEx(client, client, "%t", "CurrentDay", cookievalue + 1); //tell the user which day they are currently on
 			cookievalue++;
 			IntToString(cookievalue, SavedBonus[client], sizeof(SavedBonus[])); // Add 1 to bonus
 			SetClientCookie(client, g_hDailyBonusCookie, SavedBonus[client]); // Save bonus
