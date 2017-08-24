@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
-#define PLUGIN_VERSION "1.8"
+#define PLUGIN_VERSION "1.9"
 
 #include <sourcemod>
 #include <sdktools>
@@ -40,7 +40,6 @@ public void OnPluginStart()
 	AutoExecConfig(true, "dailycredits");
 	RegConsoleCmd("sm_daily", Cmd_Daily);
 	RegConsoleCmd("sm_dailies", Cmd_Daily);
-	FormatTime(CurrentDate, sizeof(CurrentDate), "%Y%m%d"); // Save current date in variable
 	InitializeDB();
 }
 
@@ -60,6 +59,7 @@ public Action Cmd_Daily(int client, int args)
 {
 	if (!GetConVarBool(g_hDailyEnable))return Plugin_Handled;
 	if (!IsValidClient(client))return Plugin_Handled;
+	FormatTime(CurrentDate, sizeof(CurrentDate), "%Y%m%d"); // Save current date in variable
 	char steamId[32];
 	if (GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId)))
 	{

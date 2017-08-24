@@ -4,7 +4,7 @@
 #include <multicolors>
 
 #define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
-#define PLUGIN_VERSION "1.8"
+#define PLUGIN_VERSION "1.9"
 
 ConVar g_hDailyEnable;
 ConVar g_hDailyCredits;
@@ -48,7 +48,6 @@ public void OnPluginStart()
 	}
 	RegConsoleCmd("sm_daily", Cmd_Daily);
 	RegConsoleCmd("sm_dailies", Cmd_Daily);
-	FormatTime(CurrentDate, sizeof(CurrentDate), "%Y%m%d"); // Save current date in variable
 }
 
 public void OnClientCookiesCached(int client)
@@ -148,6 +147,7 @@ stock void GiveCredits(int client, bool FirstDay)
 
 stock int IsDailyAvailable(int client)
 {
+	FormatTime(CurrentDate, sizeof(CurrentDate), "%Y%m%d"); // Save current date in variable
 	if (StringToInt(CurrentDate) - StringToInt(SavedDate[client]) == 1)
 	{
 		return 1; // If saved date - current date = 1 return true
