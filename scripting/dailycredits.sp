@@ -4,7 +4,7 @@
 #include <multicolors>
 
 #define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
-#define PLUGIN_VERSION "2.0"
+#define PLUGIN_VERSION "2.1"
 
 ConVar g_hDailyEnable;
 ConVar g_hDailyCredits;
@@ -64,6 +64,10 @@ public Action Cmd_Daily(int client, int args)
 	else if (StrEqual(SavedDate[client], ""))
 	{
 		GiveCredits(client, true);
+		return Plugin_Handled;
+	}
+	else if (IsDailyAvailable(client) == 0)
+	{
 		return Plugin_Handled;
 	}
 	else if (IsDailyAvailable(client) == 1) // Check if daily is available
