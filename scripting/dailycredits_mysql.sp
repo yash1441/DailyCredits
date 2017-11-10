@@ -1,7 +1,7 @@
 #pragma semicolon 1
 
 #define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
-#define PLUGIN_VERSION "2.1"
+#define PLUGIN_VERSION "2.2"
 
 #include <sourcemod>
 #include <sdktools>
@@ -16,7 +16,9 @@ ConVar g_hDailyCredits;
 ConVar g_hDailyBonus;
 ConVar g_hDailyMax;
 ConVar g_hDailyReset;
+ConVar g_hDailyInterval;
 char CurrentDate[20];
+int ConnectTime[MAXPLAYERS + 1];
 
 public Plugin myinfo = 
 {
@@ -36,11 +38,22 @@ public void OnPluginStart()
 	g_hDailyBonus = CreateConVar("sm_daily_credits_bonus", "2", "Increase / Addition of the credits on consecutive days.", 0, true, 0.0);
 	g_hDailyMax = CreateConVar("sm_daily_credits_max", "50", "Maximum amount of credits that you can get daily.", 0, true, 0.0);
 	g_hDailyReset = CreateConVar("sm_daily_credits_resetperiod", "7", "Amount of days after which the streak should reset itself. Set to 0 to disable.", 0, true, 0.0);
+	g_hDailyInterval = CreateConVar("sm_daily_credits_interval", "0", "Number of minutes required by the player to play on the server before getting daily credits. Set to 0 to immediately give credits upon using !daily.", 0, true, 0.0);
 	
 	AutoExecConfig(true, "dailycredits");
 	RegConsoleCmd("sm_daily", Cmd_Daily);
 	RegConsoleCmd("sm_dailies", Cmd_Daily);
 	InitializeDB();
+}
+
+public void OnClientConnected(int client)
+{
+	ConnectTime[client] = GetTime();
+}
+
+public void OnClientDisconnect(int client)
+{
+	ConnectTime[client] = 0;
 }
 
 public void InitializeDB()
@@ -57,8 +70,18 @@ public void InitializeDB()
 
 public Action Cmd_Daily(int client, int args)
 {
-	if (!GetConVarBool(g_hDailyEnable))return Plugin_Handled;
-	if (!IsValidClient(client))return Plugin_Handled;
+	if (!GetConVarBool(g_hDailyEnable)) return Plugin_Handled;
+	if (!IsValidClient(client)) return Plugin_Handled;
+	if (GetConVarInt(g_hDailyInterval) > 0)
+	{
+		int TimeTillNow = 0;
+		TimeTillNow = RoundToFloor(float((GetTime() - ConnectTime[client]) / 60));
+		if (TimeTillNow < GetConVarInt(g_hDailyInterval))
+		{
+			CPrintToChatEx(client, client, "%t", "WaitForInterval", GetConVarInt(g_hDailyInterval) - TimeTillNow);
+			return Plugin_Handled;
+		}
+	}
 	FormatTime(CurrentDate, sizeof(CurrentDate), "%Y%m%d"); // Save current date in variable
 	char steamId[32];
 	if (GetClientAuthId(client, AuthId_Steam2, steamId, sizeof(steamId)))

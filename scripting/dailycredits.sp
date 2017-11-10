@@ -4,7 +4,7 @@
 #include <multicolors>
 
 #define PLUGIN_AUTHOR "Simon -edit by Nachtfrische"
-#define PLUGIN_VERSION "2.1"
+#define PLUGIN_VERSION "2.2"
 
 ConVar g_hDailyEnable;
 ConVar g_hDailyCredits;
@@ -13,9 +13,11 @@ ConVar g_hDailyMax;
 ConVar g_hDailyReset;
 Handle g_hDailyCookie;
 Handle g_hDailyBonusCookie;
+ConVar g_hDailyInterval;
 char CurrentDate[20];
 char SavedDate[MAXPLAYERS + 1][50];
 char SavedBonus[MAXPLAYERS + 1][4];
+int ConnectTime[MAXPLAYERS + 1];
 
 
 public Plugin myinfo = 
@@ -38,6 +40,7 @@ public void OnPluginStart()
 	g_hDailyCookie = RegClientCookie("DailyCreditsDate", "Cookie for daily credits last used date.", CookieAccess_Protected);
 	g_hDailyBonusCookie = RegClientCookie("DailyCreditsBonus", "Cookie for daily credits bonus.", CookieAccess_Protected);
 	g_hDailyReset = CreateConVar("sm_daily_credits_resetperiod", "7", "Amount of days after which the streak should reset itself. Set to 0 to disable.", 0, true, 0.0);
+	g_hDailyInterval = CreateConVar("sm_daily_credits_interval", "0", "Number of minutes required by the player to play on the server before getting daily credits. Set to 0 to immediately give credits upon using !daily.", 0, true, 0.0);
 	
 	AutoExecConfig(true, "dailycredits");
 	for (new i = MaxClients; i > 0; --i)
@@ -50,6 +53,16 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_dailies", Cmd_Daily);
 }
 
+public void OnClientConnected(int client)
+{
+	ConnectTime[client] = GetTime();
+}
+
+public void OnClientDisconnect(int client)
+{
+	ConnectTime[client] = 0;
+}
+
 public void OnClientCookiesCached(int client)
 {
 	GetClientCookie(client, g_hDailyCookie, SavedDate[client], sizeof(SavedDate[])); // Get saved date on client connecting
@@ -59,9 +72,19 @@ public void OnClientCookiesCached(int client)
 public Action Cmd_Daily(int client, int args)
 {
 	FormatTime(CurrentDate, sizeof(CurrentDate), "%Y%m%d"); // Save current date in variable
-	if (!GetConVarBool(g_hDailyEnable))return Plugin_Handled;
-	else if (!IsValidClient(client))return Plugin_Handled;
-	else if (StrEqual(SavedDate[client], ""))
+	if (!GetConVarBool(g_hDailyEnable)) return Plugin_Handled;
+	if (!IsValidClient(client)) return Plugin_Handled;
+	if (GetConVarInt(g_hDailyInterval) > 0)
+	{
+		int TimeTillNow = 0;
+		TimeTillNow = RoundToFloor(float((GetTime() - ConnectTime[client]) / 60));
+		if (TimeTillNow < GetConVarInt(g_hDailyInterval))
+		{
+			CPrintToChatEx(client, client, "%t", "WaitForInterval", GetConVarInt(g_hDailyInterval) - TimeTillNow);
+			return Plugin_Handled;
+		}
+	}
+	if (StrEqual(SavedDate[client], ""))
 	{
 		GiveCredits(client, true);
 		return Plugin_Handled;
