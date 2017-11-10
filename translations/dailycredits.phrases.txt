@@ -46,10 +46,17 @@
 		"de"		"{teamcolor}[Store]{default} Glückwunsch, du hast die höchste Creditbonusstufe von {green}{1} Tagen{default} erreicht. Kehre morgen zurück um einen neuen Creditbonus zu starten und mehr Credits zu erhalten!"
 		"fr"		"{teamcolor}[Store]{default} Félicitation, Tu as atteint la plus grande récompense au bout du {green}{1} jour {default}. Revient demain pour recommencer une nouvelle serie de crédits et avoir plus de credits!"
 	}
+	
 	"CookieError"
 	{
 		"en"		"{teamcolor}[Store]{default} {red}Error{default} receiving daily credits. Invalid cookie!"
 		"de"		"{teamcolor}[Store]{default} {red}Fehler{default} beim Erhalten der täglichen Credits. Ungültiger Cookie!"
 		"fr"		"{teamcolor}[Store]{default} {red}Erreur{default} Recevoir des crédits quotidiens. Cookie invalide!"
 	}
+	
+	"WaitForInterval"
+	{
+		"#format"	"{1:i}"
+		"en"		"{teamcolor}[Store]{default} You need to play on the server for {green}{1} more minutes{default} to be able to receive your daily credits!"
+	}	
 }
